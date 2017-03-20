@@ -37,6 +37,73 @@ float counter = 0;
 /* Buffer used to store the content of the publication */
 char message_buff[MQTT_BUFFER_SIZE];
 
+/* Pointers to the application callbacks */
+static void (*relayr_mqtt_cmd_callback)(const char *, void *, uint8_t) = NULL;
+static void (*relayr_mqtt_cfg_callback)(const char *, void *, uint8_t) = NULL;
+
+/* Callback function from the MQTT library and client initialisation */
+void callback(char* topic, byte* payload, unsigned int length);
+MQTT client((char *)MQTT_SERVER, MQTT_PORT, callback, MQTT_BUFFER_SIZE);
+
+/* Publication handler from a subscribed topic */
+void callback(char* topic, byte* payload, unsigned int length) {
+  char p[length + 1];
+  uint8_t type;
+  void *data = NULL;
+  memcpy(p, payload, length);
+  p[length] = 0;
+  StaticJsonBuffer<200> jsonBuffer;
+  JsonObject& root = jsonBuffer.parseObject(p);
+
+  if (!root.success()) {
+    Serial.println("[RELAYR] decoding JSON content failed");
+    return;
+  }
+
+  const char *name = root["name"];
+
+  if(root["value"].is<bool>()) {
+    {
+      type = JSON_IS_BOOL;
+      bool val = root["value"];
+      data = &val;
+      Serial.printf("The value is %u\n", *((bool *)data));
+    }
+  } else if(root["value"].is<signed long>()) {
+    {
+      type = JSON_IS_INT;
+      signed long val = root["value"];
+      data = &val;
+      Serial.printf("The value is %ld\n", *((signed long *)data));
+    }
+  } else if(root["value"].is<const char*>()) {
+    {
+      type = JSON_IS_STRING;
+      const char *val = root["value"];
+      data = (void *)val;
+      Serial.printf("The value is %s\n", (const char *)data);
+    }
+  } else {
+    Serial.println("[RELAYR] value format not supported");
+    return;
+  }
+
+  if(strncmp(&topic[strlen(topic)-4], "/cmd", 4) == 0) {
+    relayr_mqtt_cmd_callback(name, data, type);
+  } else {
+    relayr_mqtt_cfg_callback(name, data, type);
+  }
+}
+
+/* If the client is connected to the broker, polls the connection for data */
+bool relayr_mqtt_poll(void) {
+  if(client.isConnected()) {
+    client.loop();
+    return TRUE;
+  }
+  return FALSE;
+}
+
 bool relayr_check_wifi_connection(wifi_data_t *buf) {
   int ping;
   ping = WiFi.ping(buf->dns, 3);
@@ -46,18 +113,22 @@ bool relayr_check_wifi_connection(wifi_data_t *buf) {
 }
 
 /* Connects to the MQTT broker and subscribe to default topics */
-bool relayr_mqtt_connect(MQTT *client, mqtt_data_t *mqtt) {
+bool relayr_mqtt_connect(mqtt_data_t *mqtt, void (*cmd)(const char*, void*, uint8_t),
+                         void (*cfg)(const char*, void*, uint8_t)) {
   String topic;
   Serial.println("[RELAYR] Connecting to mqtt server...");
 
-  if(client->connect(mqtt->client_id, mqtt->user, mqtt->passwd)) {
+  relayr_mqtt_cmd_callback = cmd;
+  relayr_mqtt_cfg_callback = cfg;
+
+  if(client.connect(mqtt->client_id, mqtt->user, mqtt->passwd)) {
     topic = "/v1/" + String(mqtt->user) + "/config";
     Serial.println(topic);
-    client->subscribe(topic, (MQTT::EMQTT_QOS)MQTT_QOS);
+    client.subscribe(topic);
 
     topic.replace("config", "cmd");
     Serial.println(topic);
-    client->subscribe(topic, (MQTT::EMQTT_QOS)MQTT_QOS);
+    client.subscribe(topic);
 
     return TRUE;
   }
@@ -116,7 +187,7 @@ static void relayr_json_encode(JsonObject& obj, void *value, const char *meaning
 }
 
 /* Creates the expected topic string and publishes */
-bool relayr_mqtt_publish(MQTT *client, mqtt_data_t *mqtt, relayr_data_t *buf,
+bool relayr_mqtt_publish(mqtt_data_t *mqtt, relayr_data_t *buf,
                          uint8_t num, MQTT::EMQTT_QOS qos) {
   String topic = "/v1/" + String(mqtt->user) + "/data";
   /* FIXME: Hard-coded to fixed use case, change into a list */
@@ -150,5 +221,5 @@ bool relayr_mqtt_publish(MQTT *client, mqtt_data_t *mqtt, relayr_data_t *buf,
 
   pubJson.printTo(message_buff, sizeof(message_buff));
   Serial.printf("[RELAYR] Publishing %s\n", message_buff);
-  return client->publish(topic, message_buff, qos);
+  return client.publish(topic, message_buff, qos);
 }

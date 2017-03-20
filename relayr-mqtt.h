@@ -52,6 +52,7 @@ typedef enum {
   JSON_IS_UINT,
   JSON_IS_FLOAT,
   JSON_IS_STRING,
+  JSON_IS_BOOL,
   JSON_MAX_TYPES,
 } relayr_format_type_t;
 
@@ -84,11 +85,15 @@ typedef struct relayr_data {
  * API
  * ---------------------------------------------------------------------------*/
 /* MQTT connection and subscription */
-bool relayr_mqtt_connect(MQTT *client, mqtt_data_t *mqtt);
+bool relayr_mqtt_connect(mqtt_data_t *mqtt, void (*cmd)(const char*, void*, uint8_t),
+                         void (*cfg)(const char*, void*, uint8_t));
+
+/* Poll the MQTT connection */
+bool relayr_mqtt_poll(void);
 
 /* MQTT publish a previously encoded string */
-bool relayr_mqtt_publish(MQTT *client, mqtt_data_t *mqtt, relayr_data_t *buf,
-                         uint8_t num, MQTT::EMQTT_QOS qos);
+bool relayr_mqtt_publish(mqtt_data_t *mqtt, relayr_data_t *buf, uint8_t num,
+                         MQTT::EMQTT_QOS qos);
 
 /* Check the WiFI connection by sending a ping message to the DNS server */
 bool relayr_check_wifi_connection(wifi_data_t *buf);
