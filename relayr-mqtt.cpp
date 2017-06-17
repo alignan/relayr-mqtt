@@ -67,21 +67,21 @@ void callback(char* topic, byte* payload, unsigned int length) {
       type = JSON_IS_BOOL;
       bool val = root["value"];
       data = &val;
-      Serial.printf("The value is %u\n", *((bool *)data));
+      Serial.printf("[RELAYR] The value is %u\n", *((bool *)data));
     }
   } else if(root["value"].is<signed long>()) {
     {
       type = JSON_IS_INT;
       signed long val = root["value"];
       data = &val;
-      Serial.printf("The value is %ld\n", *((signed long *)data));
+      Serial.printf("[RELAYR] The value is %ld\n", *((signed long *)data));
     }
   } else if(root["value"].is<const char*>()) {
     {
       type = JSON_IS_STRING;
       const char *val = root["value"];
       data = (void *)val;
-      Serial.printf("The value is %s\n", (const char *)data);
+      Serial.printf("[RELAYR] The value is %s\n", (const char *)data);
     }
   } else {
     Serial.println("[RELAYR] value format not supported");
