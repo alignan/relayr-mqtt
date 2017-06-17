@@ -38,8 +38,10 @@ float counter = 0;
 char message_buff[MQTT_BUFFER_SIZE];
 
 /* Pointers to the application callbacks */
-static void (*relayr_mqtt_cmd_callback)(const char *, void *, uint8_t) = NULL;
-static void (*relayr_mqtt_cfg_callback)(const char *, void *, uint8_t) = NULL;
+static void (*relayr_mqtt_cmd_callback)(const char *, void *, uint8_t,
+             unsigned int) = NULL;
+static void (*relayr_mqtt_cfg_callback)(const char *, void *, uint8_t,
+             unsigned int) = NULL;
 
 /* Callback function from the MQTT library and client initialisation */
 void callback(char* topic, byte* payload, unsigned int length);
@@ -89,9 +91,9 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 
   if(strncmp(&topic[strlen(topic)-4], "/cmd", 4) == 0) {
-    relayr_mqtt_cmd_callback(name, data, type);
+    relayr_mqtt_cmd_callback(name, data, type, length);
   } else {
-    relayr_mqtt_cfg_callback(name, data, type);
+    relayr_mqtt_cfg_callback(name, data, type, length);
   }
 }
 
@@ -113,8 +115,9 @@ bool relayr_check_wifi_connection(wifi_data_t *buf) {
 }
 
 /* Connects to the MQTT broker and subscribe to default topics */
-bool relayr_mqtt_connect(mqtt_data_t *mqtt, void (*cmd)(const char*, void*, uint8_t),
-                         void (*cfg)(const char*, void*, uint8_t)) {
+bool relayr_mqtt_connect(mqtt_data_t *mqtt, void (*cmd)(const char*, void*, uint8_t,
+                         unsigned int), void (*cfg)(const char*, void*, uint8_t,
+                         unsigned int)) {
   String topic;
   Serial.println("[RELAYR] Connecting to mqtt server...");
 

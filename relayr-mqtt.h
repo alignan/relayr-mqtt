@@ -85,8 +85,9 @@ typedef struct relayr_data {
  * API
  * ---------------------------------------------------------------------------*/
 /* MQTT connection and subscription */
-bool relayr_mqtt_connect(mqtt_data_t *mqtt, void (*cmd)(const char*, void*, uint8_t),
-                         void (*cfg)(const char*, void*, uint8_t));
+bool relayr_mqtt_connect(mqtt_data_t *mqtt, void (*cmd)(const char*, void*, uint8_t,
+                         unsigned int), void (*cfg)(const char*, void*, uint8_t,
+                         unsigned int));
 
 /* Poll the MQTT connection */
 bool relayr_mqtt_poll(void);
