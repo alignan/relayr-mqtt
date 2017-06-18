@@ -172,6 +172,16 @@ static void relayr_json_encode(JsonObject& obj, void *value, const char *meaning
       obj["value"] = *reading;
     }
     break;
+    case JSON_IS_BOOL:
+    {
+      float *reading = (float *)value;
+      if(*reading) {
+        obj["value"] = "true";
+      } else {
+        obj["value"] = "false";
+      }
+    }
+    break;
     case JSON_IS_UINT:
     {
       float *reading = (float *)value;
